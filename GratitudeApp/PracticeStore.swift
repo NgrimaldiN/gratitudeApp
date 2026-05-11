@@ -7,6 +7,7 @@ final class PracticeStore: ObservableObject {
 
     private let logsKey = "breathe.quest.logs.v1"
     private let sampleSeedKey = "breathe.quest.sample.seeded.v1"
+    private let sampleHiddenKey = "breathe.quest.sample.hidden.v1"
     private let calendar: Calendar
     private let defaults: UserDefaults
 
@@ -119,6 +120,15 @@ final class PracticeStore: ObservableObject {
     func clearSampleData() {
         logs.removeAll { $0.source == .sample }
         defaults.set(true, forKey: sampleSeedKey)
+        defaults.set(true, forKey: sampleHiddenKey)
+        save()
+        restoreToday()
+    }
+
+    func loadSampleData() {
+        defaults.set(false, forKey: sampleHiddenKey)
+        insertSampleTimeline()
+        defaults.set(true, forKey: sampleSeedKey)
         save()
         restoreToday()
     }
@@ -160,20 +170,31 @@ final class PracticeStore: ObservableObject {
     }
 
     private func seedSampleTimelineIfNeeded() {
-        guard !defaults.bool(forKey: sampleSeedKey), !hasSampleData else {
+        guard !hasSampleData, !defaults.bool(forKey: sampleHiddenKey) else {
             return
         }
 
+        insertSampleTimeline()
+        defaults.set(true, forKey: sampleSeedKey)
+    }
+
+    private func insertSampleTimeline() {
         for sampleLog in SampleTimeline.springPresentationLogs(calendar: calendar) {
             let key = DailyWheel.dateKey(for: sampleLog.date, calendar: calendar)
-            let existing = logs.first { DailyWheel.dateKey(for: $0.date, calendar: calendar) == key }
+            let existingIndex = logs.firstIndex { DailyWheel.dateKey(for: $0.date, calendar: calendar) == key }
+            let existing = existingIndex.map { logs[$0] }
             if existing?.source == .user {
                 continue
             }
-            upsert(sampleLog)
+            if let existingIndex {
+                logs[existingIndex] = sampleLog
+            } else {
+                logs.append(sampleLog)
+            }
         }
 
-        defaults.set(true, forKey: sampleSeedKey)
+        logs.sort { $0.date < $1.date }
+        save()
     }
 
     private func load() {

@@ -41,6 +41,8 @@ private struct TodayView: View {
                         HeaderView(stats: store.stats)
                         if store.hasSampleData {
                             SampleDataNotice(clear: store.clearSampleData)
+                        } else {
+                            SampleDataPrompt(load: store.loadSampleData)
                         }
                         TodayChallengeCard(
                             store: store,
@@ -106,6 +108,48 @@ private struct SampleDataNotice: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Clear sample data")
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.72))
+                .shadow(color: .ink.opacity(0.06), radius: 14, y: 8)
+        )
+    }
+}
+
+private struct SampleDataPrompt: View {
+    let load: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "tray.and.arrow.down.fill")
+                .font(.headline.weight(.black))
+                .foregroundStyle(Color.coral)
+                .frame(width: 36, height: 36)
+                .background(Circle().fill(Color.coral.opacity(0.14)))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Sample history")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(Color.ink)
+                Text("Load the Apr 26-May 20 demo entries.")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.ink.opacity(0.62))
+            }
+
+            Spacer(minLength: 8)
+
+            Button(action: load) {
+                Text("Load")
+                    .font(.caption.weight(.black))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color.coral))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Load sample history")
         }
         .padding(14)
         .background(
@@ -322,6 +366,8 @@ private struct ProgressViewScreen: View {
 
                         if store.hasSampleData {
                             SampleDataNotice(clear: store.clearSampleData)
+                        } else {
+                            SampleDataPrompt(load: store.loadSampleData)
                         }
                         ProgressPanel(stats: store.stats)
                         LastThirtyDaysGrid(store: store)
@@ -671,6 +717,8 @@ private struct ReportView: View {
 
                         if store.hasSampleData {
                             SampleDataNotice(clear: store.clearSampleData)
+                        } else {
+                            SampleDataPrompt(load: store.loadSampleData)
                         }
                         VStack(alignment: .leading, spacing: 14) {
                             Text("May 21 checklist")
