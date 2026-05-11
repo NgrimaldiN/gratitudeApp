@@ -21,6 +21,8 @@ struct ContentView: View {
                 }
         }
         .tint(.coral)
+        .toolbarBackground(Color.cream, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
     }
 }
 
@@ -42,11 +44,13 @@ private struct TodayView: View {
                             note: $note,
                             minutes: $minutes
                         )
-                        BadgeStrip(badges: store.stats.badges)
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 18)
                     .padding(.bottom, 28)
+                }
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: 84)
                 }
             }
             .onAppear {
@@ -114,7 +118,7 @@ private struct TodayChallengeCard: View {
                     selectedPracticeID: store.todaysPractice?.id,
                     rotation: store.wheelRotation
                 )
-                .frame(width: 278, height: 278)
+                .frame(width: 248, height: 248)
                 .padding(.top, 8)
 
                 Image(systemName: "arrowtriangle.down.fill")
@@ -139,13 +143,6 @@ private struct TodayChallengeCard: View {
                 )
             } else {
                 VStack(spacing: 14) {
-                    Text("Ready for today?")
-                        .font(.title2.bold())
-                        .foregroundStyle(Color.ink)
-                    Text("The wheel picks one practice from Shannon's BREATHE course notes.")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.ink.opacity(0.66))
-                        .multilineTextAlignment(.center)
                     Button {
                         withAnimation(.interpolatingSpring(stiffness: 72, damping: 11)) {
                             store.spinToday()
@@ -156,6 +153,7 @@ private struct TodayChallengeCard: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(PrimaryButtonStyle())
+
                 }
                 .padding(.horizontal, 6)
             }
@@ -275,6 +273,9 @@ private struct ProgressViewScreen: View {
                     }
                     .padding(18)
                     .padding(.bottom, 24)
+                }
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: 84)
                 }
             }
         }
@@ -449,6 +450,9 @@ private struct ReportView: View {
                     }
                     .padding(18)
                     .padding(.bottom, 24)
+                }
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: 84)
                 }
             }
         }
