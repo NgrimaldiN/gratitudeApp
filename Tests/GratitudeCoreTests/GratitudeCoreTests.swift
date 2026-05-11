@@ -76,6 +76,45 @@ struct MindfulnessProgressTests {
     }
 }
 
+@Suite("Progress timeline")
+struct ProgressTimelineTests {
+    @Test("days include completed, pending, and empty details")
+    func daysIncludeProgressDetails() throws {
+        let calendar = Calendar.gregorian
+        let heart = try #require(PracticeCatalog.practice(id: "heart-coherence"))
+        let walk = try #require(PracticeCatalog.practice(id: "mindful-walk"))
+        let completedDate = try #require(calendar.date(from: DateComponents(year: 2026, month: 5, day: 7)))
+        let pendingDate = try #require(calendar.date(from: DateComponents(year: 2026, month: 5, day: 8)))
+        let endDate = try #require(calendar.date(from: DateComponents(year: 2026, month: 5, day: 9)))
+
+        let logs = [
+            DailyLog.completed(
+                date: completedDate,
+                practice: heart,
+                minutes: 10,
+                note: "Breathing felt smoother.",
+                calendar: calendar
+            ),
+            DailyLog.pending(date: pendingDate, practice: walk, calendar: calendar),
+        ]
+
+        let days = ProgressTimeline.days(endingAt: endDate, count: 3, logs: logs, calendar: calendar)
+
+        #expect(days.map(\.dateKey) == ["2026-05-07", "2026-05-08", "2026-05-09"])
+        #expect(days[0].isCompleted)
+        #expect(days[0].title == "Heart Coherence Breathing")
+        #expect(days[0].minutes == 10)
+        #expect(days[0].note == "Breathing felt smoother.")
+        #expect(!days[1].isCompleted)
+        #expect(days[1].title == "Mindful Walk")
+        #expect(days[1].minutes == 15)
+        #expect(!days[2].isCompleted)
+        #expect(days[2].title == "No practice logged")
+        #expect(days[2].minutes == nil)
+        #expect(days[2].note.isEmpty)
+    }
+}
+
 @Suite("Demo timeline")
 struct DemoTimelineTests {
     @Test("sample timeline is clearly marked and covers about 90 percent of April 26 through May 20")

@@ -36,6 +36,10 @@ final class PracticeStore: ObservableObject {
             .sorted { $0.date > $1.date }
     }
 
+    var progressDays: [ProgressDay] {
+        ProgressTimeline.days(endingAt: Date(), count: 30, logs: logs, calendar: calendar)
+    }
+
     var hasSampleData: Bool {
         logs.contains { $0.source == .sample }
     }

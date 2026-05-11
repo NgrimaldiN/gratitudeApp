@@ -494,6 +494,91 @@ public struct ProgressStats: Equatable, Sendable {
     }
 }
 
+public struct ProgressDay: Identifiable, Equatable, Sendable {
+    public let date: Date
+    public let dateKey: String
+    public let log: DailyLog?
+    public let practice: Practice?
+
+    public var id: String {
+        dateKey
+    }
+
+    public var isCompleted: Bool {
+        log?.isCompleted == true
+    }
+
+    public var title: String {
+        practice?.title ?? "No practice logged"
+    }
+
+    public var minutes: Int? {
+        log?.minutes
+    }
+
+    public var note: String {
+        log?.note ?? ""
+    }
+
+    public var source: LogSource? {
+        log?.source
+    }
+
+    public init(date: Date, dateKey: String, log: DailyLog?, practice: Practice?) {
+        self.date = date
+        self.dateKey = dateKey
+        self.log = log
+        self.practice = practice
+    }
+}
+
+public enum ProgressTimeline {
+    public static func days(
+        endingAt endDate: Date,
+        count: Int = 30,
+        logs: [DailyLog],
+        calendar: Calendar = .current
+    ) -> [ProgressDay] {
+        guard count > 0 else {
+            return []
+        }
+
+        let logsByDay = Dictionary(grouping: logs) { log in
+            DailyWheel.dateKey(for: log.date, calendar: calendar)
+        }
+
+        return (0..<count).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: offset - count + 1, to: endDate) else {
+                return nil
+            }
+
+            let startOfDay = calendar.startOfDay(for: date)
+            let key = DailyWheel.dateKey(for: startOfDay, calendar: calendar)
+            let log = preferredLog(from: logsByDay[key] ?? [])
+            let practice = log.flatMap { PracticeCatalog.practice(id: $0.practiceID) }
+
+            return ProgressDay(
+                date: startOfDay,
+                dateKey: key,
+                log: log,
+                practice: practice
+            )
+        }
+    }
+
+    private static func preferredLog(from logs: [DailyLog]) -> DailyLog? {
+        logs.sorted { lhs, rhs in
+            if lhs.source != rhs.source {
+                return lhs.source == .user
+            }
+            if lhs.isCompleted != rhs.isCompleted {
+                return lhs.isCompleted && !rhs.isCompleted
+            }
+            return (lhs.completedAt ?? lhs.date) > (rhs.completedAt ?? rhs.date)
+        }.first
+    }
+}
+
 public enum MindfulnessProgress {
     public static func stats(
         from logs: [DailyLog],

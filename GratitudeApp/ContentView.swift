@@ -372,35 +372,222 @@ private struct ProgressPanel: View {
 
 private struct LastThirtyDaysGrid: View {
     @ObservedObject var store: PracticeStore
+    @State private var selectedDay: ProgressDay?
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 7), count: 10)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("30-Day Path")
-                .font(.title3.bold())
-                .foregroundStyle(Color.ink)
+            HStack {
+                Text("30-Day Path")
+                    .font(.title3.bold())
+                    .foregroundStyle(Color.ink)
+                Spacer()
+                Image(systemName: "hand.tap.fill")
+                    .font(.callout.weight(.bold))
+                    .foregroundStyle(Color.ink.opacity(0.42))
+            }
 
             LazyVGrid(columns: columns, spacing: 7) {
-                ForEach(lastThirtyDays, id: \.self) { date in
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(store.isCompleted(on: date) ? Color.coral : Color.white.opacity(0.72))
-                        .frame(height: 24)
-                        .overlay {
-                            if Calendar.current.isDateInToday(date) {
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .stroke(Color.ink.opacity(0.58), lineWidth: 2)
-                            }
+                ForEach(store.progressDays) { day in
+                    Button {
+                        selectedDay = day
+                    } label: {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(cellFill(for: day))
+                                .frame(height: 28)
+                                .overlay {
+                                    if Calendar.current.isDateInToday(day.date) {
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .stroke(Color.ink.opacity(0.58), lineWidth: 2)
+                                    }
+                                }
+
+                            Text(day.date.formatted(.dateTime.day()))
+                                .font(.caption2.weight(.black))
+                                .foregroundStyle(day.isCompleted ? Color.white : Color.ink.opacity(0.56))
                         }
+                        .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(accessibilityLabel(for: day))
                 }
             }
         }
         .panelStyle()
+        .sheet(item: $selectedDay) { day in
+            ProgressDayDetailSheet(day: day)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
     }
 
-    private var lastThirtyDays: [Date] {
-        (0..<30).compactMap { offset in
-            Calendar.current.date(byAdding: .day, value: offset - 29, to: Date())
+    private func cellFill(for day: ProgressDay) -> Color {
+        if day.isCompleted {
+            return .coral
         }
+        if day.log != nil {
+            return .sun.opacity(0.52)
+        }
+        return Color.white.opacity(0.72)
+    }
+
+    private func accessibilityLabel(for day: ProgressDay) -> String {
+        let status = day.isCompleted ? "completed" : "not completed"
+        return "\(day.date.formatted(.dateTime.month().day())), \(day.title), \(status)"
+    }
+}
+
+private struct ProgressDayDetailSheet: View {
+    let day: ProgressDay
+
+    var body: some View {
+        ZStack {
+            AppBackground()
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: dayIcon)
+                            .font(.title2.weight(.black))
+                            .foregroundStyle(Color.white)
+                            .frame(width: 52, height: 52)
+                            .background(Circle().fill(dayColor))
+
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(day.date.formatted(.dateTime.weekday(.wide).month(.wide).day().year()))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.ink.opacity(0.58))
+                            Text(day.title)
+                                .font(.system(size: 28, weight: .black, design: .rounded))
+                                .foregroundStyle(Color.ink)
+                        }
+                    }
+
+                    HStack(spacing: 10) {
+                        DetailPill(title: "Status", value: statusText, symbol: dayIcon, tint: dayColor)
+                        DetailPill(title: "Minutes", value: minutesText, symbol: "timer", tint: .minty)
+                    }
+
+                    if day.source == .sample {
+                        Label("Sample data", systemImage: "testtube.2")
+                            .font(.caption.weight(.black))
+                            .foregroundStyle(Color.violet)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Capsule().fill(Color.violet.opacity(0.14)))
+                    }
+
+                    if let practice = day.practice {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Practice")
+                                .font(.headline.weight(.bold))
+                                .foregroundStyle(Color.ink)
+                            Label(practice.category.label, systemImage: practice.category.symbolName)
+                                .font(.callout.weight(.semibold))
+                                .foregroundStyle(Color.coral)
+                            Text(practice.courseMoment)
+                                .font(.callout.weight(.medium))
+                                .foregroundStyle(Color.ink.opacity(0.66))
+                        }
+                        .panelStyle()
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Notes")
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(Color.ink)
+                        Text(notesText)
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.ink.opacity(0.68))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .panelStyle()
+
+                    if day.log == nil {
+                        Text("No wheel spin or journal entry was recorded for this date.")
+                            .font(.callout.weight(.medium))
+                            .foregroundStyle(Color.ink.opacity(0.56))
+                    } else if !day.isCompleted {
+                        Text("A practice was selected, but it was not marked complete.")
+                            .font(.callout.weight(.medium))
+                            .foregroundStyle(Color.ink.opacity(0.56))
+                    }
+                }
+                .padding(20)
+                .padding(.bottom, 24)
+            }
+        }
+    }
+
+    private var dayColor: Color {
+        if day.isCompleted {
+            return .coral
+        }
+        if day.log != nil {
+            return .sun
+        }
+        return .ink.opacity(0.38)
+    }
+
+    private var dayIcon: String {
+        if day.isCompleted {
+            return "checkmark.seal.fill"
+        }
+        if day.log != nil {
+            return "circle.dashed"
+        }
+        return "minus"
+    }
+
+    private var statusText: String {
+        if day.isCompleted {
+            return "Completed"
+        }
+        if day.log != nil {
+            return "Pending"
+        }
+        return "Empty"
+    }
+
+    private var minutesText: String {
+        guard let minutes = day.minutes else {
+            return "-"
+        }
+        return "\(minutes)"
+    }
+
+    private var notesText: String {
+        day.note.isEmpty ? "No notes for this day." : day.note
+    }
+}
+
+private struct DetailPill: View {
+    let title: String
+    let value: String
+    let symbol: String
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.headline.weight(.bold))
+                .foregroundStyle(tint)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.headline.weight(.black))
+                    .foregroundStyle(Color.ink)
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.ink.opacity(0.48))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(13)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.72))
+        )
     }
 }
 
