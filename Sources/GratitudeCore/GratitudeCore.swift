@@ -282,6 +282,11 @@ public enum DailyWheel {
     }
 }
 
+public enum LogSource: String, Codable, Equatable, Sendable {
+    case user
+    case sample
+}
+
 public struct DailyLog: Identifiable, Codable, Equatable, Sendable {
     public let id: String
     public let date: Date
@@ -290,6 +295,7 @@ public struct DailyLog: Identifiable, Codable, Equatable, Sendable {
     public var minutes: Int
     public var note: String
     public var completedAt: Date?
+    public var source: LogSource
 
     public init(
         id: String,
@@ -298,7 +304,8 @@ public struct DailyLog: Identifiable, Codable, Equatable, Sendable {
         isCompleted: Bool,
         minutes: Int,
         note: String,
-        completedAt: Date?
+        completedAt: Date?,
+        source: LogSource = .user
     ) {
         self.id = id
         self.date = date
@@ -307,6 +314,30 @@ public struct DailyLog: Identifiable, Codable, Equatable, Sendable {
         self.minutes = minutes
         self.note = note
         self.completedAt = completedAt
+        self.source = source
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case date
+        case practiceID
+        case isCompleted
+        case minutes
+        case note
+        case completedAt
+        case source
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        date = try container.decode(Date.self, forKey: .date)
+        practiceID = try container.decode(String.self, forKey: .practiceID)
+        isCompleted = try container.decode(Bool.self, forKey: .isCompleted)
+        minutes = try container.decode(Int.self, forKey: .minutes)
+        note = try container.decode(String.self, forKey: .note)
+        completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt)
+        source = try container.decodeIfPresent(LogSource.self, forKey: .source) ?? .user
     }
 
     public static func pending(date: Date, practice: Practice, calendar: Calendar = .current) -> DailyLog {
@@ -326,7 +357,8 @@ public struct DailyLog: Identifiable, Codable, Equatable, Sendable {
         practice: Practice,
         minutes: Int,
         note: String,
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        source: LogSource = .user
     ) -> DailyLog {
         DailyLog(
             id: "\(DailyWheel.dateKey(for: date, calendar: calendar))-\(practice.id)",
@@ -335,8 +367,57 @@ public struct DailyLog: Identifiable, Codable, Equatable, Sendable {
             isCompleted: true,
             minutes: minutes,
             note: note,
-            completedAt: date
+            completedAt: date,
+            source: source
         )
+    }
+}
+
+public enum SampleTimeline {
+    public static func springPresentationLogs(calendar: Calendar = .current) -> [DailyLog] {
+        let entries: [(month: Int, day: Int, practiceID: String, minutes: Int, note: String)] = [
+            (4, 26, "gratitude-writing", 6, "[Sample] Wrote about coffee, a quiet morning, and feeling less rushed."),
+            (4, 27, "mindful-walk", 14, "[Sample] Walked without music and noticed wind, traffic, and tree shadows."),
+            (4, 28, "breath-focus", 10, "[Sample] Breath felt uneven at first, then settled after a few minutes."),
+            (4, 29, "loving-kindness", 12, "[Sample] Sending kind phrases to myself felt awkward but useful."),
+            (4, 30, "thought-reflection", 10, "[Sample] Repeated school thoughts showed up; naming them made them less loud."),
+            (5, 2, "heart-coherence", 10, "[Sample] Five-count breathing made my chest feel calmer before studying."),
+            (5, 3, "body-scan", 11, "[Sample] Shoulders were tense; slow movement made that obvious."),
+            (5, 4, "emotion-naming", 8, "[Sample] The best word was nervous, with some excitement underneath."),
+            (5, 5, "stress-sort", 13, "[Sample] Split stressors into school, sleep, and family; picked one small action."),
+            (5, 6, "silent-sitting", 5, "[Sample] Silence felt long, but I noticed fewer urges to grab my phone."),
+            (5, 7, "rumi-guest-house", 10, "[Sample] The main visitor was impatience, and I tried not to push it away."),
+            (5, 8, "gratitude-collage", 15, "[Sample] Chose photos of dinner, sunlight, and my desk after cleaning it."),
+            (5, 10, "senses-scan", 8, "[Sample] Sound changed the mood most; small background noises became vivid."),
+            (5, 11, "future-self-letter", 15, "[Sample] Wrote to May 21 me about keeping the practice simple."),
+            (5, 12, "mindful-walk", 16, "[Sample] Walked slower and noticed how automatic my pace usually is."),
+            (5, 13, "loving-kindness", 12, "[Sample] It was easier to include a friend than myself today."),
+            (5, 14, "heart-coherence", 11, "[Sample] Breathing evenly helped before a conversation I was avoiding."),
+            (5, 15, "gratitude-writing", 7, "[Sample] Listed tiny things; the strongest one was having enough time."),
+            (5, 16, "stress-sort", 12, "[Sample] Most stress was internal pressure, so I wrote one realistic next step."),
+            (5, 17, "breath-focus", 10, "[Sample] Mind wandered a lot, but returning to breath felt less frustrating."),
+            (5, 18, "emotion-naming", 9, "[Sample] Felt tired and a little proud; both could exist at once."),
+            (5, 19, "body-scan", 10, "[Sample] Slow neck and shoulder movement helped after sitting too long."),
+            (5, 20, "rumi-guest-house", 12, "[Sample] Tried welcoming worry as information instead of a problem to erase."),
+        ]
+
+        return entries.compactMap { entry in
+            guard
+                let date = calendar.date(from: DateComponents(year: 2026, month: entry.month, day: entry.day)),
+                let practice = PracticeCatalog.practice(id: entry.practiceID)
+            else {
+                return nil
+            }
+
+            return DailyLog.completed(
+                date: date,
+                practice: practice,
+                minutes: entry.minutes,
+                note: entry.note,
+                calendar: calendar,
+                source: .sample
+            )
+        }
     }
 }
 

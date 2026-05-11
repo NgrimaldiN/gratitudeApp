@@ -76,6 +76,31 @@ struct MindfulnessProgressTests {
     }
 }
 
+@Suite("Demo timeline")
+struct DemoTimelineTests {
+    @Test("sample timeline is clearly marked and covers about 90 percent of April 26 through May 20")
+    func sampleTimelineCoverage() throws {
+        let calendar = Calendar.gregorian
+        let logs = SampleTimeline.springPresentationLogs(calendar: calendar)
+
+        let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 26)))
+        let end = try #require(calendar.date(from: DateComponents(year: 2026, month: 5, day: 20)))
+        let completedDayKeys = Set(logs.map { DailyWheel.dateKey(for: $0.date, calendar: calendar) })
+        let practiceIDs = Set(logs.map(\.practiceID))
+
+        #expect(logs.count == 23)
+        #expect(logs.allSatisfy { $0.isCompleted })
+        #expect(logs.allSatisfy { $0.source == .sample })
+        #expect(logs.allSatisfy { $0.note.contains("[Sample]") })
+        #expect(logs.allSatisfy { $0.date >= start && $0.date <= end })
+        #expect(practiceIDs.count >= 10)
+        #expect(completedDayKeys.contains("2026-04-26"))
+        #expect(completedDayKeys.contains("2026-05-20"))
+        #expect(!completedDayKeys.contains("2026-05-01"))
+        #expect(!completedDayKeys.contains("2026-05-09"))
+    }
+}
+
 private extension Calendar {
     static var gregorian: Calendar {
         var calendar = Calendar(identifier: .gregorian)

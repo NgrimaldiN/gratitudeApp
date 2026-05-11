@@ -6,6 +6,7 @@ final class PracticeStore: ObservableObject {
     @Published var wheelRotation = 0.0
 
     private let logsKey = "breathe.quest.logs.v1"
+    private let sampleSeedKey = "breathe.quest.sample.seeded.v1"
     private let calendar: Calendar
     private let defaults: UserDefaults
 
@@ -13,6 +14,7 @@ final class PracticeStore: ObservableObject {
         self.calendar = calendar
         self.defaults = defaults
         load()
+        seedSampleTimelineIfNeeded()
         restoreToday()
     }
 
@@ -32,6 +34,10 @@ final class PracticeStore: ObservableObject {
         logs
             .filter(\.isCompleted)
             .sorted { $0.date > $1.date }
+    }
+
+    var hasSampleData: Bool {
+        logs.contains { $0.source == .sample }
     }
 
     func spinToday() {
@@ -79,12 +85,15 @@ final class PracticeStore: ObservableObject {
             let practice = PracticeCatalog.practice(id: log.practiceID)
             let title = practice?.title ?? log.practiceID
             let day = log.date.formatted(.dateTime.month(.abbreviated).day().year())
+            let source = log.source == .sample ? " [SAMPLE]" : ""
             let note = log.note.isEmpty ? "No note." : log.note
-            return "\(day): \(title), \(log.minutes) min. \(note)"
+            return "\(day): \(title), \(log.minutes) min\(source). \(note)"
         }
+        let sampleNotice = hasSampleData ? "\nSample data notice: these entries are for app demonstration only, not a real submitted journal.\n" : ""
 
         return """
         BREATHE Quest Mindfulness Report
+        \(sampleNotice)
 
         Completed days: \(stats.completedDays)
         Current streak: \(stats.currentStreak)
@@ -101,6 +110,13 @@ final class PracticeStore: ObservableObject {
         4. What benefits did this practice bring?
         5. Will I continue this or another mindfulness practice?
         """
+    }
+
+    func clearSampleData() {
+        logs.removeAll { $0.source == .sample }
+        defaults.set(true, forKey: sampleSeedKey)
+        save()
+        restoreToday()
     }
 
     private func restoreToday() {
@@ -137,6 +153,23 @@ final class PracticeStore: ObservableObject {
         }
         logs.sort { $0.date < $1.date }
         save()
+    }
+
+    private func seedSampleTimelineIfNeeded() {
+        guard !defaults.bool(forKey: sampleSeedKey), !hasSampleData else {
+            return
+        }
+
+        for sampleLog in SampleTimeline.springPresentationLogs(calendar: calendar) {
+            let key = DailyWheel.dateKey(for: sampleLog.date, calendar: calendar)
+            let existing = logs.first { DailyWheel.dateKey(for: $0.date, calendar: calendar) == key }
+            if existing?.source == .user {
+                continue
+            }
+            upsert(sampleLog)
+        }
+
+        defaults.set(true, forKey: sampleSeedKey)
     }
 
     private func load() {

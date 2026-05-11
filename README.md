@@ -10,7 +10,12 @@ BREATHE Quest is a rapid native iOS MVP for a mindfulness school project. Each d
 - Streaks, XP, levels, and badges for lightweight gamification
 - 30-day progress grid for the semester project
 - Report Kit tab with the teacher's required reflection prompts and shareable draft text
+- Clearly labeled sample-data timeline for class demos
 - Tested reusable core logic in `GratitudeCore`
+
+## Sample Data
+
+Fresh installs seed a demo timeline from April 26 to May 20, 2026 with 23 completed sample entries, or about 90% of the days. Every seeded entry is marked as sample data in the UI and report text, and the sample notice can clear those entries from the app.
 
 ## Wheel Content
 

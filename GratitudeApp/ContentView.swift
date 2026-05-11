@@ -39,6 +39,9 @@ private struct TodayView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 22) {
                         HeaderView(stats: store.stats)
+                        if store.hasSampleData {
+                            SampleDataNotice(clear: store.clearSampleData)
+                        }
                         TodayChallengeCard(
                             store: store,
                             note: $note,
@@ -70,6 +73,46 @@ private struct TodayView: View {
                 note = store.todayLog?.note ?? ""
             }
         }
+    }
+}
+
+private struct SampleDataNotice: View {
+    let clear: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "testtube.2")
+                .font(.headline.weight(.black))
+                .foregroundStyle(Color.violet)
+                .frame(width: 36, height: 36)
+                .background(Circle().fill(Color.violet.opacity(0.14)))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Sample data")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(Color.ink)
+                Text("Demo entries from Apr 26-May 20 are marked as sample.")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.ink.opacity(0.62))
+            }
+
+            Spacer(minLength: 8)
+
+            Button(action: clear) {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.black))
+                    .foregroundStyle(Color.ink.opacity(0.58))
+                    .frame(width: 30, height: 30)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Clear sample data")
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.72))
+                .shadow(color: .ink.opacity(0.06), radius: 14, y: 8)
+        )
     }
 }
 
@@ -133,6 +176,7 @@ private struct TodayChallengeCard: View {
                 PracticeDetail(
                     practice: practice,
                     isCompleted: store.todayCompleted,
+                    isSample: store.todayLog?.source == .sample,
                     note: $note,
                     minutes: $minutes,
                     complete: {
@@ -170,6 +214,7 @@ private struct TodayChallengeCard: View {
 private struct PracticeDetail: View {
     let practice: Practice
     let isCompleted: Bool
+    let isSample: Bool
     @Binding var note: String
     @Binding var minutes: Int
     let complete: () -> Void
@@ -182,6 +227,14 @@ private struct PracticeDetail: View {
                     .textCase(.uppercase)
                     .foregroundStyle(Color.coral)
                 Spacer()
+                if isSample {
+                    Text("Sample")
+                        .font(.caption.weight(.black))
+                        .foregroundStyle(Color.violet)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(Color.violet.opacity(0.14)))
+                }
                 Text("\(practice.durationMinutes) min")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(Color.ink.opacity(0.56))
@@ -267,6 +320,9 @@ private struct ProgressViewScreen: View {
                             .font(.system(size: 36, weight: .black, design: .rounded))
                             .foregroundStyle(Color.ink)
 
+                        if store.hasSampleData {
+                            SampleDataNotice(clear: store.clearSampleData)
+                        }
                         ProgressPanel(stats: store.stats)
                         LastThirtyDaysGrid(store: store)
                         HistoryList(store: store)
@@ -392,6 +448,14 @@ private struct HistoryRow: View {
                 Text(log.date.formatted(.dateTime.month(.abbreviated).day())) + Text(" · \(log.minutes) min")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.ink.opacity(0.54))
+                if log.source == .sample {
+                    Text("Sample data")
+                        .font(.caption2.weight(.black))
+                        .foregroundStyle(Color.violet)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Color.violet.opacity(0.14)))
+                }
                 if !log.note.isEmpty {
                     Text(log.note)
                         .font(.callout)
@@ -418,6 +482,9 @@ private struct ReportView: View {
                             .font(.system(size: 36, weight: .black, design: .rounded))
                             .foregroundStyle(Color.ink)
 
+                        if store.hasSampleData {
+                            SampleDataNotice(clear: store.clearSampleData)
+                        }
                         VStack(alignment: .leading, spacing: 14) {
                             Text("May 21 checklist")
                                 .font(.title2.bold())
